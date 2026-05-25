@@ -26,13 +26,13 @@ export type Product = {
   description: string;
 };
 
-import heroImg from "@/assets/hero-gift.jpg";
-import mumImg from "@/assets/gift-mum.jpg";
-import loveImg from "@/assets/gift-love.jpg";
-import candleImg from "@/assets/gift-candle.jpg";
-import birthdayImg from "@/assets/gift-birthday.jpg";
-import jewelryImg from "@/assets/gift-jewelry.jpg";
-import hamperImg from "@/assets/gift-hamper.jpg";
+import heroImg from "../assets/hero-gift.jpg";
+import mumImg from "../assets/gift-mum.jpg";
+import loveImg from "../assets/gift-love.jpg";
+import candleImg from "../assets/gift-candle.jpg";
+import birthdayImg from "../assets/gift-birthday.jpg";
+import jewelryImg from "../assets/gift-jewelry.jpg";
+import hamperImg from "../assets/gift-hamper.jpg";
 
 const imgs = [heroImg, mumImg, loveImg, candleImg, birthdayImg, jewelryImg, hamperImg];
 
