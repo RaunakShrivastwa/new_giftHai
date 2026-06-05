@@ -14,6 +14,11 @@ import { useState } from "react";
 
 import { useCart } from "../lib/cart";
 import { useAuth } from "../lib/auth";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../store/dataStore";
+import { logout } from "../slice/authSlice";
+import { toast } from "sonner";
+import SearchFilter from "../util/searchFilter";
 
 const NAV = [
   { to: "/", label: "Home" },
@@ -25,17 +30,27 @@ const NAV = [
 
 export function SiteHeader() {
   const { count } = useCart();
-  const { user, logout } = useAuth();
+  const {user} = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
   const location = useLocation();
   const [q, setQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
 
+  const dispatch = useDispatch<AppDispatch>();
+
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault();
     navigate(`/products?q=${encodeURIComponent(q)}`);
   };
+
+  const handleLogout = () => { 
+    setUserMenu(false);
+    dispatch(logout());
+    toast.success("Logged out successfully!", {
+      className: "gift_toast",
+    });
+  }
 
   return (
     <>
@@ -48,6 +63,7 @@ export function SiteHeader() {
         }}
       >
         {/* Moving Shine */}
+
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-0 -left-1/3 h-full w-1/3 rotate-12 bg-white/20 blur-2xl animate-[shine_6s_linear_infinite]" />
         </div>
@@ -117,27 +133,11 @@ export function SiteHeader() {
               </Link>
             ))}
           </nav>
-
+          {/* search filter */}
           <div className="flex items-center gap-1.5">
-            <form
-              onSubmit={onSearch}
-              className="hidden md:flex items-center rounded-full px-3 py-1.5 border"
-              style={{
-                background: "var(--pink-50)",
-                borderColor: "var(--pink-100)",
-              }}
-            >
-              <Search
-                className="w-4 h-4"
-                style={{ color: "var(--pink-500)" }}
-              />
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search gifts…"
-                className="bg-transparent outline-none text-sm px-2 w-40"
-              />
-            </form>
+            <div className="search_parent">
+              <SearchFilter />
+            </div>
 
             <Link
               to="/cart"
@@ -166,7 +166,11 @@ export function SiteHeader() {
                     className="w-8 h-8 rounded-full text-white text-xs font-semibold flex items-center justify-center"
                     style={{ background: "var(--gradient-rose)" }}
                   >
-                    {user.name.slice(0, 2).toUpperCase()}
+                    <img
+                      style={{ borderRadius: "50%" }}
+                      src={user.avtar}
+                      alt={user.fname}
+                    />
                   </span>
                 </button>
                 {userMenu && (
@@ -179,7 +183,9 @@ export function SiteHeader() {
                       className="px-3 py-2 border-b"
                       style={{ borderColor: "var(--pink-100)" }}
                     >
-                      <div className="font-medium text-sm">{user.name}</div>
+                      <div className="font-medium text-sm">
+                        {user.fname} {user.lname}
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         {user.email}
                       </div>
@@ -210,8 +216,7 @@ export function SiteHeader() {
                     </Link>
                     <button
                       onClick={() => {
-                        logout();
-                        setUserMenu(false);
+                        handleLogout();
                       }}
                       className="w-full flex items-center px-3 py-2 text-sm rounded-lg hover:bg-pink-50"
                     >

@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   Check,
+  Gift,
   Heart,
   Image as ImageIcon,
   QrCode,
@@ -17,6 +18,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { getProduct, GIFT_COVERS, PRODUCTS } from "../lib/products";
 import { useCart } from "../lib/cart";
 import { Gift3DPreview } from "../components/gift-3d-preview";
+import UploadFeeling from "./Feeling/UploadFeeling";
 
 const QR_ADDON_PRICE = 5;
 
@@ -35,6 +37,7 @@ export default function ProductDetail() {
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+    const [userFeeling, setUserFeeling] = useState(null);
 
   if (!product) {
     return (
@@ -201,18 +204,6 @@ export default function ProductDetail() {
           </p>
 
           <div className="mt-7">
-            <div className="flex items-center justify-between mb-3">
-              <h3
-                className="text-sm font-semibold"
-                style={{ color: "var(--pink-900)" }}
-              >
-                Choose gift wrap
-              </h3>
-              <span className="text-xs text-muted-foreground">
-                {cover.name}
-                {cover.price > 0 ? ` +$${cover.price}` : " · Free"}
-              </span>
-            </div>
             <div className="flex gap-3 flex-wrap">
               {GIFT_COVERS.map((c) => (
                 <button
@@ -234,6 +225,10 @@ export default function ProductDetail() {
             </div>
           </div>
 
+          {/* write your feelings */}
+          <UploadFeeling onUpload={(data) => setUserFeeling(data)} />
+
+          {/* write free message */}
           <div className="mt-6">
             <label
               className="text-sm font-semibold flex items-center justify-between mb-2"
@@ -363,6 +358,18 @@ export default function ProductDetail() {
                 +
               </button>
             </div>
+
+            {/* choose cover */}
+            <button
+            
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-white border text-sm font-medium"
+              style={{
+                borderColor: "var(--pink-300)",
+                color: "var(--pink-700)",
+              }}
+            >
+              <Gift className="w-4 h-4" /> Choose Gift Cover
+            </button>
 
             <button
               onClick={() => setShowPreview(true)}

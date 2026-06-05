@@ -1,6 +1,8 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Package, Settings, User as UserIcon } from "lucide-react";
 import { useAuth } from "../lib/auth";
+import { RootState } from "src/store/dataStore";
+import { useSelector } from "react-redux";
 
 const TABS = [
   { to: "/profile", label: "Profile", icon: UserIcon },
@@ -9,7 +11,7 @@ const TABS = [
 ];
 
 export default function ProfileLayout() {
-  const { user } = useAuth();
+  const { user } = useSelector((state: RootState) => state.auth);
   const { pathname } = useLocation();
 
   if (!user) {
@@ -42,14 +44,14 @@ export default function ProfileLayout() {
           className="w-16 h-16 rounded-full text-white flex items-center justify-center font-serif text-2xl"
           style={{ background: "var(--gradient-rose)" }}
         >
-          {user.name.slice(0, 2).toUpperCase()}
+          <img style={ { borderRadius: "50%" }} src={user.avtar} alt={user.fname} />
         </div>
         <div>
           <h1
             className="font-serif text-3xl"
             style={{ color: "var(--pink-900)" }}
           >
-            Hi, {user.name} 🌸
+            Hi, {user.fname} 🌸
           </h1>
           <p className="text-sm text-muted-foreground">{user.email}</p>
         </div>
