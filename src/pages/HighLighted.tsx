@@ -135,7 +135,7 @@ const HighLighted: React.FC = () => {
                   className="text-sm font-semibold"
                   style={{ color: "var(--pink-700)" }}
                 >
-                  ${p.price}
+                  ₹{p.price}
                 </span>
               </div>
               <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">

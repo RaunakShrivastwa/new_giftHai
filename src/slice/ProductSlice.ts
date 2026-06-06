@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
+import type { RootState } from '../store/dataStore';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -49,6 +50,20 @@ const initialState: ProductState = {
     totalPages: 0,
     totalElements: 0,
     isLastPage: false,
+};
+
+export const getProductById = (
+    products: Product[],
+    productId: string | number
+) => {
+    return products.find((product) => String(product.id) === String(productId));
+};
+
+export const selectProductById = (
+    state: RootState,
+    productId: string | number
+) => {
+    return getProductById(state.products.products, productId);
 };
 
 // 4. Create the Async Thunk for fetching paginated products

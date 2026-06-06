@@ -87,7 +87,7 @@ const UploadFeeling = ({ onUpload }) => {
 
       <div className="text-center mb-6">
         <h3 className="text-xl font-display font-semibold text-primary">
-          Upload Your Feeling
+          Upload Your Feeling ₹100
         </h3>
         <p className="text-sm text-muted-foreground">
           {uploadedFile

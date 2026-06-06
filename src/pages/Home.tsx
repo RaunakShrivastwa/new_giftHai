@@ -66,7 +66,7 @@ const PROMISES = [
   {
     icon: Truck,
     title: "Delivered anywhere",
-    body: "Free worldwide shipping over $75. Same-day local delivery available.",
+    body: "Free worldwide shipping over ₹75. Same-day local delivery available.",
   },
   {
     icon: PenLine,
@@ -174,7 +174,7 @@ export default function Home() {
                     className="text-sm font-semibold"
                     style={{ color: "var(--pink-700)" }}
                   >
-                    ${p.price}
+                    ₹{p.price}
                   </span>
                 </div>
                 <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">

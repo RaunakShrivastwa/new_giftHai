@@ -14,7 +14,7 @@ export default function ProfileOrders() {
           <div className="flex-1">
             <div className="flex justify-between items-baseline gap-3">
               <div className="font-medium" style={{ color: "var(--pink-900)" }}>{o.id}</div>
-              <div className="font-semibold" style={{ color: "var(--pink-700)" }}>${o.total}</div>
+              <div className="font-semibold" style={{ color: "var(--pink-700)" }}>₹{o.total}</div>
             </div>
             <div className="text-xs text-muted-foreground">{o.items}</div>
             <div className="text-xs mt-1"><span className="text-muted-foreground">{o.date}</span> · <span className="font-medium" style={{ color: "var(--pink-600)" }}>{o.status}</span></div>

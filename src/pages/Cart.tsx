@@ -50,7 +50,11 @@ export default function Cart() {
         <div className="space-y-4">
           {items.map((it) => {
             const linePrice =
-              (it.basePrice + it.coverPrice + it.qrAddon) * it.qty;
+              (it.basePrice +
+                it.coverPrice +
+                it.qrAddon +
+                (it.feelingPrice ?? 0)) *
+              it.qty;
             return (
               <div
                 key={it.key}
@@ -73,8 +77,8 @@ export default function Cart() {
                       </h3>
                       <div className="text-xs text-muted-foreground mt-0.5">
                         Wrap: {it.coverName}
-                        {it.coverPrice ? ` (+$${it.coverPrice})` : ""}
-                        {it.qrAddon ? ` · QR keepsake (+$${it.qrAddon})` : ""}
+                        {it.coverPrice ? ` (+₹${it.coverPrice})` : ""}
+                        {it.qrAddon ? ` · QR keepsake (+₹${it.qrAddon})` : ""}
                       </div>
                       {it.message && (
                         <div
@@ -120,7 +124,7 @@ export default function Cart() {
                       className="font-semibold"
                       style={{ color: "var(--pink-700)" }}
                     >
-                      ${linePrice}
+                      ₹{linePrice}
                     </div>
                   </div>
                 </div>
@@ -145,11 +149,11 @@ export default function Cart() {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Subtotal</span>
-              <span>${subtotal}</span>
+              <span>₹{subtotal}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Shipping</span>
-              <span>{shipping === 0 ? "Free 💕" : `$${shipping}`}</span>
+              <span>{shipping === 0 ? "Free 💕" : `₹${shipping}`}</span>
             </div>
           </div>
           <div
@@ -161,7 +165,7 @@ export default function Cart() {
               className="font-serif text-2xl"
               style={{ color: "var(--pink-700)" }}
             >
-              ${total}
+              ₹{total}
             </span>
           </div>
           <Link

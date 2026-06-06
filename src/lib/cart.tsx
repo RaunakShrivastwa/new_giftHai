@@ -1,5 +1,19 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
+export type GiftOrderJson = {
+  userId: number | null;
+  productId: number | string;
+  qty: number;
+  coverId: number | string | null;
+  feelingId: number | null;
+  giftMessage: string;
+  qrKeepsakeAdded: boolean;
+  totalAmount: number;
+  transactionID: string;
+  orderStatus: "Paid" | "Pending" | "Failed";
+  createdAt: string;
+};
+
 export type CartItem = {
   key: string;
   productId: string;
@@ -10,8 +24,10 @@ export type CartItem = {
   coverName: string;
   coverPrice: number;
   message: string;
+  feelingPrice?: number;
   qrAddon: number; // 5 if QR added, else 0
   qty: number;
+  giftOrderJson?: GiftOrderJson;
 };
 
 type Ctx = {
@@ -54,7 +70,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const count = items.reduce((s, i) => s + i.qty, 0);
   const subtotal = items.reduce(
-    (s, i) => s + (i.basePrice + i.coverPrice + i.qrAddon) * i.qty,
+    (s, i) =>
+      s + (i.basePrice + i.coverPrice + i.qrAddon + (i.feelingPrice ?? 0)) * i.qty,
     0,
   );
 

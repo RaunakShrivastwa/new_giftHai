@@ -1,5 +1,6 @@
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useMemo, useRef, useState } from "react";
+import { useSelector } from "react-redux";
 import {
   ArrowRight,
   Check,
@@ -15,16 +16,38 @@ import {
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 
-import { getProduct, GIFT_COVERS, PRODUCTS } from "../lib/products";
-import { useCart } from "../lib/cart";
+import { GIFT_COVERS, PRODUCTS, type Product as LocalProduct } from "../lib/products";
+import { type GiftOrderJson, useCart } from "../lib/cart";
 import { Gift3DPreview } from "../components/gift-3d-preview";
 import UploadFeeling from "./Feeling/UploadFeeling";
+import GiftCover, { type SelectedGiftCover } from "./GiftCover";
+import { selectProductById } from "../slice/ProductSlice";
+import type { RootState } from "../store/dataStore";
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const QR_ADDON_PRICE = 5;
+const FEELING_ADDON_PRICE = 100;
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
-  const product = id ? getProduct(id) : undefined;
+  const selectedProduct = useSelector((state: RootState) =>
+    id ? selectProductById(state, id) : undefined,
+  );
+  const user = useSelector((state: RootState) => state.auth.user);
+  const product: LocalProduct | undefined = selectedProduct
+    ? {
+        id: String(selectedProduct.id),
+        slug: String(selectedProduct.id),
+        name: selectedProduct.title,
+        price: selectedProduct.price,
+        image: selectedProduct.productImage,
+        category: "personalised",
+        tag: selectedProduct.bestseller ? "Bestseller" : undefined,
+        rating: selectedProduct.rating,
+        reviews: selectedProduct.reviews,
+        description: selectedProduct.description,
+      }
+    : undefined;
   const { add } = useCart();
   const navigate = useNavigate();
 
@@ -36,8 +59,10 @@ export default function ProductDetail() {
   const [zoomXY, setZoomXY] = useState({ x: 50, y: 50 });
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showCoverModal, setShowCoverModal] = useState(false);
+  const [giftCover, setGiftCover] = useState<SelectedGiftCover | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-    const [userFeeling, setUserFeeling] = useState(null);
+  const [userFeeling, setUserFeeling] = useState<unknown>(null);
 
   if (!product) {
     return (
@@ -60,8 +85,15 @@ export default function ProductDetail() {
   }
 
   const cover = GIFT_COVERS.find((c) => c.id === coverId)!;
+  const activeCoverName = giftCover?.name ?? cover.name;
+  const activeCoverPrice = giftCover?.price ?? cover.price;
+  const feelingPrice = userFeeling ? FEELING_ADDON_PRICE : 0;
   const total =
-    (product.price + cover.price + (hasQR ? QR_ADDON_PRICE : 0)) * qty;
+    (product.price +
+      activeCoverPrice +
+      feelingPrice +
+      (hasQR ? QR_ADDON_PRICE : 0)) *
+    qty;
 
   const qrValue = useMemo(() => {
     if (!hasQR) return undefined;
@@ -76,6 +108,35 @@ export default function ProductDetail() {
   const similar = PRODUCTS.filter(
     (p) => p.category === product.category && p.id !== product.id,
   ).slice(0, 4);
+
+  const createGiftOrderJson = (): GiftOrderJson => {
+    const uploadedFeelingId =
+      typeof userFeeling === "object" && userFeeling !== null && "id" in userFeeling
+        ? (userFeeling as { id?: string | number }).id
+        : null;
+    const feelingId =
+      uploadedFeelingId === null || uploadedFeelingId === undefined
+        ? null
+        : Number(uploadedFeelingId);
+
+    return {
+      userId: user?.id ?? null,
+      productId: Number.isNaN(Number(product.id)) ? product.id : Number(product.id),
+      qty,
+      coverId: giftCover
+        ? giftCover.id
+        : Number.isNaN(Number(cover.id))
+          ? cover.id
+          : Number(cover.id),
+      feelingId: feelingId === null || Number.isNaN(feelingId) ? null : feelingId,
+      giftMessage: message,
+      qrKeepsakeAdded: hasQR,
+      totalAmount: total,
+      transactionID: `TXN_${Date.now()}`,
+      orderStatus: "Paid",
+      createdAt: new Date().toISOString(),
+    };
+  };
 
   const onUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -95,12 +156,14 @@ export default function ProductDetail() {
       name: product.name,
       image: product.image,
       basePrice: product.price,
-      coverId: cover.id,
-      coverName: cover.name,
-      coverPrice: cover.price,
+      coverId: giftCover ? String(giftCover.id) : cover.id,
+      coverName: activeCoverName,
+      coverPrice: activeCoverPrice,
       message,
+      feelingPrice,
       qrAddon: hasQR ? QR_ADDON_PRICE : 0,
       qty,
+      giftOrderJson: createGiftOrderJson(),
     });
     toast.success(`${product.name} added to cart 💕`);
   };
@@ -136,7 +199,7 @@ export default function ProductDetail() {
             }}
           >
             <img
-              src={product.image}
+              src={BASE_URL + product.image}
               alt={product.name}
               className="w-full h-full object-cover transition-transform duration-300"
               style={
@@ -190,11 +253,12 @@ export default function ProductDetail() {
               className="font-serif text-4xl"
               style={{ color: "var(--pink-700)" }}
             >
-              ${total}
+              ₹{total}
             </div>
-            {(cover.price > 0 || hasQR) && (
+            {(activeCoverPrice > 0 || feelingPrice > 0 || hasQR) && (
               <span className="text-xs text-muted-foreground">
-                ${product.price} + ${cover.price + (hasQR ? QR_ADDON_PRICE : 0)}{" "}
+                ₹{product.price} + ₹
+                {activeCoverPrice + feelingPrice + (hasQR ? QR_ADDON_PRICE : 0)}{" "}
                 add-ons × {qty}
               </span>
             )}
@@ -208,16 +272,21 @@ export default function ProductDetail() {
               {GIFT_COVERS.map((c) => (
                 <button
                   key={c.id}
-                  onClick={() => setCoverId(c.id)}
+                  onClick={() => {
+                    setCoverId(c.id);
+                    setGiftCover(null);
+                  }}
                   title={c.name}
-                  className={`relative w-12 h-12 rounded-2xl border-2 transition ${coverId === c.id ? "scale-110" : "border-white shadow-sm"}`}
+                  className={`relative w-12 h-12 rounded-2xl border-2 transition ${!giftCover && coverId === c.id ? "scale-110" : "border-white shadow-sm"}`}
                   style={{
                     background: c.swatch,
                     borderColor:
-                      coverId === c.id ? "var(--pink-600)" : undefined,
+                      !giftCover && coverId === c.id
+                        ? "var(--pink-600)"
+                        : undefined,
                   }}
                 >
-                  {coverId === c.id && (
+                  {!giftCover && coverId === c.id && (
                     <Check className="absolute inset-0 m-auto w-5 h-5 text-white drop-shadow" />
                   )}
                 </button>
@@ -226,7 +295,7 @@ export default function ProductDetail() {
           </div>
 
           {/* write your feelings */}
-          <UploadFeeling onUpload={(data) => setUserFeeling(data)} />
+          <UploadFeeling onUpload={(data: unknown) => setUserFeeling(data)} />
 
           {/* write free message */}
           <div className="mt-6">
@@ -268,7 +337,7 @@ export default function ProductDetail() {
                     className="text-sm font-semibold"
                     style={{ color: "var(--pink-900)" }}
                   >
-                    Add a QR keepsake (+${QR_ADDON_PRICE})
+                    Add a QR keepsake (+₹{QR_ADDON_PRICE})
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Generate a QR with your message
@@ -361,14 +430,15 @@ export default function ProductDetail() {
 
             {/* choose cover */}
             <button
-            
+              onClick={() => setShowCoverModal(true)}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-white border text-sm font-medium"
               style={{
                 borderColor: "var(--pink-300)",
                 color: "var(--pink-700)",
               }}
             >
-              <Gift className="w-4 h-4" /> Choose Gift Cover
+              <Gift className="w-4 h-4" />{" "}
+              {giftCover ? giftCover.name : "Choose Gift Cover"}
             </button>
 
             <button
@@ -382,6 +452,60 @@ export default function ProductDetail() {
               <Sparkles className="w-4 h-4" /> 3D Gift Preview
             </button>
           </div>
+
+          {giftCover && (
+            <div
+              className="mt-4 flex flex-col gap-4 rounded-2xl border bg-white p-3 sm:flex-row sm:items-center"
+              style={{
+                borderColor: "var(--pink-200)",
+                boxShadow: "var(--shadow-soft)",
+              }}
+            >
+              <img
+                src={giftCover.image}
+                alt={giftCover.name}
+                className="h-20 w-20 shrink-0 rounded-2xl object-cover"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p
+                      className="text-xs font-semibold uppercase tracking-wider"
+                      style={{ color: "var(--pink-600)" }}
+                    >
+                      Chosen cover
+                    </p>
+                    <h3
+                      className="mt-1 text-sm font-semibold"
+                      style={{ color: "var(--pink-900)" }}
+                    >
+                      {giftCover.name}
+                    </h3>
+                  </div>
+                  <span
+                    className="shrink-0 text-sm font-semibold"
+                    style={{ color: "var(--pink-700)" }}
+                  >
+                    ₹{giftCover.price}
+                  </span>
+                </div>
+                <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                  {giftCover.description}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCoverModal(true)}
+                className="w-full rounded-full border px-4 py-2 text-xs font-medium sm:w-auto"
+                style={{
+                  borderColor: "var(--pink-300)",
+                  color: "var(--pink-700)",
+                }}
+              >
+                Change
+              </button>
+            </div>
+          )}
 
           <div className="mt-4 grid grid-cols-2 gap-3">
             <button
@@ -402,16 +526,30 @@ export default function ProductDetail() {
                 boxShadow: "var(--shadow-soft)",
               }}
             >
-              Buy Now <ArrowRight className="w-4 h-4" />
+              Buy Now ₹{total}{" "}
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
 
           <div className="mt-5 flex items-center gap-2 text-xs text-muted-foreground">
             <Truck className="w-4 h-4" style={{ color: "var(--pink-600)" }} />{" "}
-            Free shipping over $75 · Same-day local delivery
+            Free shipping over ₹75 · Same-day local delivery
           </div>
         </div>
       </div>
+
+      {/* gift cover modal */}
+      {showCoverModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => setShowCoverModal(false)}
+        >
+          <GiftCover
+            setGiftCover={setGiftCover}
+            onClose={() => setShowCoverModal(false)}
+          />
+        </div>
+      )}
 
       {showPreview && (
         <div
@@ -488,7 +626,7 @@ export default function ProductDetail() {
                     className="text-sm font-semibold"
                     style={{ color: "var(--pink-700)" }}
                   >
-                    ${p.price}
+                    ₹{p.price}
                   </span>
                 </div>
               </Link>
