@@ -19,6 +19,7 @@ import { AppDispatch, RootState } from "../store/dataStore";
 import { logout } from "../slice/authSlice";
 import { toast } from "sonner";
 import SearchFilter from "../util/searchFilter";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const NAV = [
   { to: "/", label: "Home" },
@@ -168,7 +169,7 @@ export function SiteHeader() {
                   >
                     <img
                       style={{ borderRadius: "50%" }}
-                      src={user.avtar}
+                      src={BASE_URL + user.avtar}
                       alt={user.fname}
                     />
                   </span>

@@ -92,7 +92,7 @@
 
             &:hover {
                 background-color: var(--pink-500);
-                color: #fff;
+                color: #fff !important;
             }
         }
     }

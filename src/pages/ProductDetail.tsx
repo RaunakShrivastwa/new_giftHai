@@ -16,8 +16,12 @@ import {
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 
-import { GIFT_COVERS, PRODUCTS, type Product as LocalProduct } from "../lib/products";
-import { type GiftOrderJson, useCart } from "../lib/cart";
+import {
+  GIFT_COVERS,
+  PRODUCTS,
+  type Product as LocalProduct,
+} from "../lib/products";
+import { type CartItem, type GiftOrderJson, useCart } from "../lib/cart";
 import { Gift3DPreview } from "../components/gift-3d-preview";
 import UploadFeeling from "./Feeling/UploadFeeling";
 import GiftCover, { type SelectedGiftCover } from "./GiftCover";
@@ -111,7 +115,9 @@ export default function ProductDetail() {
 
   const createGiftOrderJson = (): GiftOrderJson => {
     const uploadedFeelingId =
-      typeof userFeeling === "object" && userFeeling !== null && "id" in userFeeling
+      typeof userFeeling === "object" &&
+      userFeeling !== null &&
+      "id" in userFeeling
         ? (userFeeling as { id?: string | number }).id
         : null;
     const feelingId =
@@ -121,14 +127,17 @@ export default function ProductDetail() {
 
     return {
       userId: user?.id ?? null,
-      productId: Number.isNaN(Number(product.id)) ? product.id : Number(product.id),
+      productId: Number.isNaN(Number(product.id))
+        ? product.id
+        : Number(product.id),
       qty,
       coverId: giftCover
         ? giftCover.id
         : Number.isNaN(Number(cover.id))
           ? cover.id
           : Number(cover.id),
-      feelingId: feelingId === null || Number.isNaN(feelingId) ? null : feelingId,
+      feelingId:
+        feelingId === null || Number.isNaN(feelingId) ? null : feelingId,
       giftMessage: message,
       qrKeepsakeAdded: hasQR,
       totalAmount: total,
@@ -137,6 +146,22 @@ export default function ProductDetail() {
       createdAt: new Date().toISOString(),
     };
   };
+
+  const buildCartItem = (): CartItem => ({
+    key: `checkout-${Date.now()}`,
+    productId: product.id,
+    name: product.name,
+    image: product.image,
+    basePrice: product.price,
+    coverId: giftCover ? String(giftCover.id) : cover.id,
+    coverName: activeCoverName,
+    coverPrice: activeCoverPrice,
+    message,
+    feelingPrice,
+    qrAddon: hasQR ? QR_ADDON_PRICE : 0,
+    qty,
+    giftOrderJson: createGiftOrderJson(),
+  });
 
   const onUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -151,26 +176,14 @@ export default function ProductDetail() {
   };
 
   const handleAdd = () => {
-    add({
-      productId: product.id,
-      name: product.name,
-      image: product.image,
-      basePrice: product.price,
-      coverId: giftCover ? String(giftCover.id) : cover.id,
-      coverName: activeCoverName,
-      coverPrice: activeCoverPrice,
-      message,
-      feelingPrice,
-      qrAddon: hasQR ? QR_ADDON_PRICE : 0,
-      qty,
-      giftOrderJson: createGiftOrderJson(),
-    });
+    add(buildCartItem());
     toast.success(`${product.name} added to cart 💕`);
   };
 
   const buyNow = () => {
-    handleAdd();
-    navigate("/checkout");
+    const item = buildCartItem();
+    add(item);
+    navigate("/checkout", { state: { checkoutItem: item } });
   };
 
   return (
@@ -526,8 +539,7 @@ export default function ProductDetail() {
                 boxShadow: "var(--shadow-soft)",
               }}
             >
-              Buy Now ₹{total}{" "}
-              <ArrowRight className="w-4 h-4" />
+              Buy Now ₹{total} <ArrowRight className="w-4 h-4" />
             </button>
           </div>
 
