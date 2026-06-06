@@ -176,10 +176,10 @@ export default function SearchFilter() {
                   onClick={() => handleSelectSuggestion(item)}
                   className="item cursor-pointer hover:bg-rose-50 p-2 rounded flex items-center gap-2"
                 >
-                  <History className="w-4 h-4 text-pink-400 flex-shrink-0" />
+                  <History className="w-4 h-4 text-pink-400 flex-shrink-0 icons" />
                   <span
                     className="truncate text-sm"
-                    style={{ color: "var(--pink-700)" }}
+                    
                   >
                     {item}
                   </span>

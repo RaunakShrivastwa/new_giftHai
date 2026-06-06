@@ -21,6 +21,7 @@ export default function Checkout() {
   const [couponCode, setCouponCode] = useState("");
   const [couponMessage, setCouponMessage] = useState("");
   const [discount, setDiscount] = useState(0);
+  const [placingOrder, setPlacingOrder] = useState(false);
 
   const recipientName = useMemo(
     () => (user ? `${user.fname || ""} ${user.lname || ""}`.trim() : ""),
@@ -30,6 +31,8 @@ export default function Checkout() {
     () => (user ? (user.mobileNumbers?.[0] ?? "") : ""),
     [user],
   );
+
+  
 
   const checkoutState = location.state as { checkoutItem?: CartItem } | null;
   const checkoutItems = checkoutState?.checkoutItem
@@ -41,6 +44,9 @@ export default function Checkout() {
       (i.basePrice + i.coverPrice + i.qrAddon + (i.feelingPrice ?? 0)) * i.qty,
     0,
   );
+
+  
+  console.log("mmmmmmmm ", checkoutItems);
 
   useEffect(() => {
     if (!user) return;
@@ -88,23 +94,120 @@ export default function Checkout() {
     setCouponMessage("Invalid coupon code.");
   };
 
-  const placeOrder = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+ const placeOrder = async (e: FormEvent<HTMLFormElement>) => {
+   e.preventDefault();
 
-    if (!addressLine1 || !city || !postcode) {
-      toast.error("Please fill in your shipping address.");
-      return;
-    }
+   const token = localStorage.getItem("token");
+   if (!token) {
+     toast.error("Please login again to place your order.");
+     return;
+   }
 
-    setPlaced(true);
-    if (checkoutState?.checkoutItem) {
-      remove(checkoutState.checkoutItem.key);
-    } else {
-      clear();
-    }
-    toast.success("Order placed with love 💕");
-    setTimeout(() => navigate("/profile/orders"), 1500);
-  };
+   // Load Razorpay SDK
+   const isScriptLoaded = await loadRazorpayScript();
+   if (!isScriptLoaded) {
+     toast.error("Razorpay SDK failed to load. Are you online?");
+     return;
+   }
+
+   try {
+     setPlacingOrder(true);
+
+     // 1. Hit your Spring Boot backend to create the PENDING DB entries and Razorpay orders
+     const orderPromises = checkoutItems.map((item) => {
+       const unitPrice =
+         item.basePrice +
+         item.coverPrice +
+         item.qrAddon +
+         (item.feelingPrice ?? 0);
+       const itemTotal = unitPrice * item.qty;
+       const savedOrder = item.giftOrderJson;
+       const productId = savedOrder?.productId ?? item.productId;
+       let coverId: any = savedOrder?.coverId ?? item.coverId ?? 0;
+       const giftMessage = savedOrder?.giftMessage ?? item.message ?? "";
+
+       if (typeof coverId === "string") {
+         coverId = null;
+       }
+
+       const payload = {
+         userId: savedOrder?.userId ?? user?.id ?? null,
+         totalAmount: checkoutItems.length === 1 ? total : itemTotal,
+         productId: Number.isNaN(Number(productId))
+           ? productId
+           : Number(productId),
+         coverId: coverId,
+         feelingId: savedOrder?.feelingId ?? null,
+         freeMessage: giftMessage,
+       };
+
+       return fetch(`${BASE_URL}/api/p/orders`, {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/json",
+           Authorization: `Bearer ${token}`,
+         },
+         body: JSON.stringify(payload),
+       }).then(async (res) => {
+         if (!res.ok) throw new Error("Order setup failed");
+         return res.json(); // Returns the ProductOrder object saved in backend
+       });
+     });
+
+     const createdOrders = await Promise.all(orderPromises);
+
+     // If handling multiple items checkout simultaneously, you can map them.
+     // For simplicity of checkout UI configuration, we use the first item or pass an overarching ID.
+     const referenceOrder = createdOrders[0];
+
+     // 2. Open Razorpay checkout configuration setup
+     const options = {
+       key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Ensure your public key id is here
+       amount: referenceOrder.totalAmount * 100, // Matching paise configuration
+       currency: "INR",
+       name: "Gift Hai Be",
+       description: "Purchase Payment",
+       order_id: referenceOrder.transactionId, // This is the ID returned by backend rzpOrder.get("id")
+       handler: async function (response: any) {
+         // This function executes when payment succeeds
+         toast.success("Payment Received!");
+
+         // OPTIONAL BUT RECOMMENDED: Verify payment on your backend here
+         // await fetch(`${BASE_URL}/api/p/orders/verify`, { method: "POST", body: ... })
+
+         setPlaced(true);
+         if (checkoutState?.checkoutItem) {
+           remove(checkoutState.checkoutItem.key);
+         } else {
+           clear();
+         }
+         toast.success("Order placed with love 💕");
+         setTimeout(() => navigate("/profile/orders"), 1500);
+       },
+       prefill: {
+         name: recipientName || "User Name",
+         contact: phoneNumber || "",
+       },
+       theme: {
+         color: "#db2777", // Pink primary brand color targeting your CSS layout
+       },
+       modal: {
+         ondismiss: () => {
+           setPlacingOrder(false);
+           toast.error("Payment window closed.");
+         },
+       },
+     };
+
+     const rzp1 = new (window as any).Razorpay(options);
+     rzp1.open();
+   } catch (error) {
+     const message =
+       error instanceof Error ? error.message : "Order creation failed";
+     toast.error(message);
+     setPlacingOrder(false);
+   }
+ };
 
   if (checkoutItems.length === 0 && !placed) {
     return (
@@ -239,19 +342,19 @@ export default function Checkout() {
 
             <div className="grid sm:grid-cols-2 gap-3">
               <input
-                required
+               
                 placeholder="Card number"
                 className={`sm:col-span-2 ${inputCls}`}
                 style={inputStyle}
               />
               <input
-                required
+                
                 placeholder="MM / YY"
                 className={inputCls}
                 style={inputStyle}
               />
               <input
-                required
+               
                 placeholder="CVC"
                 className={inputCls}
                 style={inputStyle}
@@ -406,17 +509,31 @@ export default function Checkout() {
 
           <button
             type="submit"
+            disabled={placingOrder}
             className="mt-5 w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full text-white font-semibold"
             style={{
               background: "var(--gradient-rose)",
               boxShadow: "var(--shadow-soft)",
+              opacity: placingOrder ? 0.7 : 1,
             }}
           >
-            <Heart className="w-4 h-4" fill="currentColor" /> Place Order · ₹
-            {total}
+            <Heart className="w-4 h-4" fill="currentColor" />{" "}
+            {placingOrder ? "Placing Order..." : `Place Order · ₹${total}`}
           </button>
         </aside>
       </form>
     </main>
   );
 }
+
+
+
+const loadRazorpayScript = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};

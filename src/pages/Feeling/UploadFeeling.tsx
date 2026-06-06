@@ -42,6 +42,7 @@ const UploadFeeling = ({ onUpload }) => {
       const data = await response.json();
 
       const fileData = {
+        id:data.id || Date.now(), // Fallback to timestamp if no ID returned
         name: file.name || "Unnamed Feeling",
         type: file.type,
         url: `${API_BASE_URL}${data.media}`,

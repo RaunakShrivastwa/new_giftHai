@@ -93,6 +93,10 @@
             &:hover {
                 background-color: var(--pink-500);
                 color: #fff !important;
+
+                .icons{
+                    color:white !important
+                }
             }
         }
     }

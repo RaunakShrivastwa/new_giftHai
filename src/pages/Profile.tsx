@@ -3,6 +3,7 @@ import { Package, Settings, User as UserIcon } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { RootState } from "src/store/dataStore";
 import { useSelector } from "react-redux";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const TABS = [
   { to: "/profile", label: "Profile", icon: UserIcon },
@@ -44,7 +45,7 @@ export default function ProfileLayout() {
           className="w-16 h-16 rounded-full text-white flex items-center justify-center font-serif text-2xl"
           style={{ background: "var(--gradient-rose)" }}
         >
-          <img style={ { borderRadius: "50%" }} src={user.avtar} alt={user.fname} />
+          <img style={ { borderRadius: "50%" }} src={BASE_URL +user.avtar} alt={user.fname} />
         </div>
         <div>
           <h1

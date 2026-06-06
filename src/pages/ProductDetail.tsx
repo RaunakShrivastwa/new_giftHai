@@ -113,6 +113,9 @@ export default function ProductDetail() {
     (p) => p.category === product.category && p.id !== product.id,
   ).slice(0, 4);
 
+  console.log("***** ",userFeeling);
+  
+
   const createGiftOrderJson = (): GiftOrderJson => {
     const uploadedFeelingId =
       typeof userFeeling === "object" &&
@@ -120,8 +123,7 @@ export default function ProductDetail() {
       "id" in userFeeling
         ? (userFeeling as { id?: string | number }).id
         : null;
-    const feelingId =
-      uploadedFeelingId === null || uploadedFeelingId === undefined
+    const feelingId = uploadedFeelingId === null || uploadedFeelingId === undefined
         ? null
         : Number(uploadedFeelingId);
 

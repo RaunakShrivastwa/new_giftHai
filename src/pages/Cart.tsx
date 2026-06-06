@@ -1,9 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "../lib/cart";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function Cart() {
   const { items, setQty, remove, subtotal } = useCart();
+  const navigate = useNavigate();
   const shipping = subtotal >= 75 || subtotal === 0 ? 0 : 9;
   const total = subtotal + shipping;
 
@@ -62,7 +64,7 @@ export default function Cart() {
                 style={{ borderColor: "var(--pink-100)" }}
               >
                 <img
-                  src={it.image}
+                  src={BASE_URL + it.image}
                   alt={it.name}
                   className="w-24 h-24 rounded-xl object-cover"
                 />
@@ -97,35 +99,46 @@ export default function Cart() {
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="mt-3 flex items-center justify-between">
-                    <div
-                      className="flex items-center rounded-full"
-                      style={{ background: "var(--pink-50)" }}
-                    >
-                      <button
-                        onClick={() => setQty(it.key, it.qty - 1)}
-                        className="w-8 h-8 flex items-center justify-center"
+                  <div className="mt-3 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div
+                        className="flex items-center rounded-full"
+                        style={{ background: "var(--pink-50)" }}
+                      >
+                        <button
+                          onClick={() => setQty(it.key, it.qty - 1)}
+                          className="w-8 h-8 flex items-center justify-center"
+                          style={{ color: "var(--pink-700)" }}
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="w-8 text-center text-sm font-medium">
+                          {it.qty}
+                        </span>
+                        <button
+                          onClick={() => setQty(it.key, it.qty + 1)}
+                          className="w-8 h-8 flex items-center justify-center"
+                          style={{ color: "var(--pink-700)" }}
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <div
+                        className="font-semibold"
                         style={{ color: "var(--pink-700)" }}
                       >
-                        <Minus className="w-3 h-3" />
-                      </button>
-                      <span className="w-8 text-center text-sm font-medium">
-                        {it.qty}
-                      </span>
-                      <button
-                        onClick={() => setQty(it.key, it.qty + 1)}
-                        className="w-8 h-8 flex items-center justify-center"
-                        style={{ color: "var(--pink-700)" }}
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
+                        ₹{linePrice}
+                      </div>
                     </div>
-                    <div
-                      className="font-semibold"
-                      style={{ color: "var(--pink-700)" }}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigate("/checkout", { state: { checkoutItem: it } })
+                      }
+                      className="w-full rounded-full border border-pink-200 px-3 py-2 text-sm font-semibold text-pink-700 hover:bg-pink-50"
                     >
-                      ₹{linePrice}
-                    </div>
+                      Buy this gift
+                    </button>
                   </div>
                 </div>
               </div>
