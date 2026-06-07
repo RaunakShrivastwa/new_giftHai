@@ -9,6 +9,7 @@ import {
   Settings,
   Menu,
   X,
+  ShieldCheck, // Added icon for Admin View
 } from "lucide-react";
 import { useState } from "react";
 
@@ -31,7 +32,7 @@ const NAV = [
 
 export function SiteHeader() {
   const { count } = useCart();
-  const {user} = useSelector((state: RootState) => state.auth);
+  const { user } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
   const location = useLocation();
   const [q, setQ] = useState("");
@@ -40,18 +41,26 @@ export function SiteHeader() {
 
   const dispatch = useDispatch<AppDispatch>();
 
+  // Helper check to identify if the current user is an Admin
+  // (Adapts whether your backend returns a string role or an array of roles)
+  const isAdmin =
+    user &&
+    (user.role === "ADMIN" ||
+      (Array.isArray(user.roles) && user.roles.includes("ADMIN")) ||
+      user.role === "ROLE_ADMIN");
+
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault();
     navigate(`/products?q=${encodeURIComponent(q)}`);
   };
 
-  const handleLogout = () => { 
+  const handleLogout = () => {
     setUserMenu(false);
     dispatch(logout());
     toast.success("Logged out successfully!", {
       className: "gift_toast",
     });
-  }
+  };
 
   return (
     <>
@@ -64,7 +73,6 @@ export function SiteHeader() {
         }}
       >
         {/* Moving Shine */}
-
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-0 -left-1/3 h-full w-1/3 rotate-12 bg-white/20 blur-2xl animate-[shine_6s_linear_infinite]" />
         </div>
@@ -90,6 +98,7 @@ export function SiteHeader() {
           </p>
         </div>
       </div>
+
       <header
         className="sticky top-0 z-40 backdrop-blur-xl bg-background/80 border-b"
         style={{ borderColor: "var(--pink-100)" }}
@@ -111,14 +120,14 @@ export function SiteHeader() {
             >
               <span
                 className="inline-flex items-center justify-center w-9 h-9 rounded-full text-white"
-                style={{
-                  background: "var(--gradient-rose)",
-                  boxShadow: "var(--shadow-soft)",
-                }}
+                
               >
-                <Heart className="w-4 h-4" fill="currentColor" />
+                <img
+                  src="https://res.cloudinary.com/dnk5iqeup/image/upload/v1780836781/Gemini_Generated_Image_mn6xrmn6xrmn6xrm-removebg-preview_eoiwwq.png"
+                  alt=""
+                />
               </span>
-              <span className="hidden sm:inline">Bloom &amp; Bow</span>
+              <span className="hidden sm:inline">GiftHai</span>
             </Link>
           </div>
 
@@ -134,6 +143,7 @@ export function SiteHeader() {
               </Link>
             ))}
           </nav>
+
           {/* search filter */}
           <div className="flex items-center gap-1.5">
             <div className="search_parent">
@@ -169,7 +179,11 @@ export function SiteHeader() {
                   >
                     <img
                       style={{ borderRadius: "50%" }}
-                      src={BASE_URL + user.avtar}
+                      src={
+                        user.avtar?.startsWith("https")
+                          ? user.avtar
+                          : BASE_URL + user.avtar
+                      }
                       alt={user.fname}
                     />
                   </span>
@@ -191,6 +205,19 @@ export function SiteHeader() {
                         {user.email}
                       </div>
                     </div>
+
+                    {/* HIGHLIGHT: Conditional Dropdown Option for Admins */}
+                    {isAdmin && (
+                      <Link
+                        to="/admin/dashboard"
+                        onClick={() => setUserMenu(false)}
+                        className="flex items-center px-3 py-2 text-sm font-semibold rounded-lg text-rose-700 bg-rose-50/60 hover:bg-rose-50 transition-colors border border-rose-100/50 mb-1"
+                      >
+                        <ShieldCheck className="w-4 h-4 mr-2 text-rose-600" />
+                        Admin Dashboard
+                      </Link>
+                    )}
+
                     <Link
                       to="/profile"
                       onClick={() => setUserMenu(false)}
@@ -216,10 +243,8 @@ export function SiteHeader() {
                       Settings
                     </Link>
                     <button
-                      onClick={() => {
-                        handleLogout();
-                      }}
-                      className="w-full flex items-center px-3 py-2 text-sm rounded-lg hover:bg-pink-50"
+                      onClick={handleLogout}
+                      className="w-full flex items-center px-3 py-2 text-sm rounded-lg hover:bg-pink-50 text-red-600"
                     >
                       <LogOut className="w-4 h-4 mr-2" />
                       Log out
@@ -251,34 +276,52 @@ export function SiteHeader() {
           </div>
         </div>
 
+        {/* Mobile Navigation Drawer */}
         {menuOpen && (
           <div
             className="lg:hidden fixed inset-0 z-50 bg-black/40"
             onClick={() => setMenuOpen(false)}
           >
             <div
-              className="absolute left-0 top-0 bottom-0 w-72 bg-white p-6"
+              className="absolute left-0 top-0 bottom-0 w-72 bg-white p-6 flex flex-col justify-between"
               onClick={(e) => e.stopPropagation()}
             >
-              <button
-                onClick={() => setMenuOpen(false)}
-                className="absolute top-4 right-4"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              <nav className="flex flex-col gap-1 mt-8">
-                {NAV.map((n, i) => (
+              <div>
+                <button
+                  onClick={() => setMenuOpen(false)}
+                  className="absolute top-4 right-4"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <nav className="flex flex-col gap-1 mt-8">
+                  {NAV.map((n, i) => (
+                    <Link
+                      key={i}
+                      to={n.to}
+                      onClick={() => setMenuOpen(false)}
+                      className="px-3 py-3 rounded-lg text-sm font-medium hover:bg-pink-50"
+                      style={{ color: "var(--pink-900)" }}
+                    >
+                      {n.label}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
+
+              {/* HIGHLIGHT: Mobile Menu Bottom Admin Link */}
+              {isAdmin && (
+                <div className="border-t pt-4 border-pink-100">
                   <Link
-                    key={i}
-                    to={n.to}
+                    to="/admin/dashboard"
                     onClick={() => setMenuOpen(false)}
-                    className="px-3 py-3 rounded-lg text-sm font-medium hover:bg-pink-50"
-                    style={{ color: "var(--pink-900)" }}
+                    className="flex items-center justify-center w-full px-4 py-3 text-sm font-bold rounded-xl text-white shadow-sm transition-transform active:scale-95"
+                    style={{ background: "var(--gradient-rose)" }}
                   >
-                    {n.label}
+                    <ShieldCheck className="w-4 h-4 mr-2" />
+                    Switch to Admin View
                   </Link>
-                ))}
-              </nav>
+                </div>
+              )}
             </div>
           </div>
         )}

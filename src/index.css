@@ -66,3 +66,72 @@ body {
     text-shadow: 0 0 12px rgba(255,255,255,0.6);
   }
 }
+
+
+/* --- Global Body & Base Text --- */
+body,
+p,
+span,
+li,
+input,
+textarea {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
+
+  /* Dark gray instead of harsh black for a softer look */
+}
+
+/* --- Headings (The Premium Touch) --- */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  
+  letter-spacing: 0.5px;
+}
+
+/* Specific heading tweaks */
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+}
+
+h2 {
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+/* --- Interactive & UI Elements --- */
+a,
+button,
+.btn {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 500;
+  /* Slightly bolder for readability */
+  text-decoration: none;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  /* Looks clean and modern on buttons */
+}
+
+/* --- Accent Text (e.g., Subtitles, Micro-copy, "Every gift tells a story") --- */
+small,
+.subtitle {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+/* Optional: Elegant italic callouts (e.g., "Handcrafted with love") */
+em,
+.tagline {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-weight: 400;
+}

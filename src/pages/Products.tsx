@@ -139,7 +139,7 @@ export default function Products() {
           No gifts found. Try another search or category 💕
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
           {products.map((p) => (
             <Link key={p.id} to={`/products/${p.id}`} className="group">
               <div

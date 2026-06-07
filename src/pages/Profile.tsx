@@ -45,7 +45,7 @@ export default function ProfileLayout() {
           className="w-16 h-16 rounded-full text-white flex items-center justify-center font-serif text-2xl"
           style={{ background: "var(--gradient-rose)" }}
         >
-          <img style={ { borderRadius: "50%" }} src={BASE_URL +user.avtar} alt={user.fname} />
+          <img style={ { borderRadius: "50%" }} src={ user.avtar.startsWith("https") ? user.avtar :BASE_URL + user.avtar} alt={user.fname} />
         </div>
         <div>
           <h1
