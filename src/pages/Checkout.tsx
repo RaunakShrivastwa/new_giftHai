@@ -292,7 +292,7 @@ export default function Checkout() {
               />
               <input
                 required
-                value={[user?.address?.[0].landmark || ""]}
+                value={[user?.address?.[0]?.landmark || ""]}
                 onChange={(e) => setAddressLine1(e.target.value)}
                 placeholder="Address line 1"
                 className={`sm:col-span-2 ${inputCls}`}
@@ -300,7 +300,7 @@ export default function Checkout() {
               />
               <input
                 required
-                value={[user?.address?.[0].state || ""]}
+                value={[user?.address?.[0]?.state || ""]}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="City"
                 className={inputCls}
@@ -308,7 +308,7 @@ export default function Checkout() {
               />
               <input
                 required
-                value={[user?.address?.[0].pincode || "000000"]}
+                value={[user?.address?.[0]?.pincode || "000000"]}
                 onChange={(e) => setPostcode(e.target.value)}
                 placeholder="Postcode"
                 className={inputCls}
