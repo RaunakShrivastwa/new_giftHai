@@ -26,6 +26,7 @@ import "leaflet/dist/leaflet.css";
 import { useCart } from "../lib/cart";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../store/dataStore";
+import { searchProductsByQuery } from "../slice/ProductSlice";
 import { logout } from "../slice/authSlice";
 import { toast } from "sonner";
 import SearchFilter from "../util/SearchFilter";
@@ -50,7 +51,7 @@ const NAV = [
   { to: "/products?category=anniversary", label: "Anniversary" },
   { to: "/products?category=flowers", label: "Flowers" },
   { to: "/products?category=cakes", label: "Cakes" },
-  { to: "/products?category=personalised", label: "Personalised" },
+  { to: "", label: "Personalized" },
   { to: "/products?category=plants", label: "Plants" },
   { to: "/products?category=balloons", label: "Balloon n Services" },
   { to: "/products?category=chocolates", label: "Chocolates" },
@@ -1161,6 +1162,8 @@ function CategoryNav() {
   const location = useLocation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
 
   const checkScroll = () => {
     const el = scrollRef.current;
@@ -1187,10 +1190,17 @@ function CategoryNav() {
       >
         {NAV.map((n, i) => {
           const isActive = location.pathname + location.search === n.to;
+          const handleClick = (e: React.MouseEvent) => {
+            e.preventDefault();
+            const trimmed = n.label.trim();
+            dispatch(searchProductsByQuery(trimmed));
+            navigate(`/products?q=${encodeURIComponent(trimmed)}`);
+          };
+
           return (
-            <Link
+            <button
               key={i}
-              to={n.to}
+              onClick={handleClick}
               className={`
                 relative flex items-center gap-0.5 whitespace-nowrap px-3 py-3
                 text-[13px] font-medium transition-colors flex-shrink-0 group
@@ -1213,7 +1223,7 @@ function CategoryNav() {
                   }
                 `}
               />
-            </Link>
+            </button>
           );
         })}
       </div>
