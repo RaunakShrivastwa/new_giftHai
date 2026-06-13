@@ -18,6 +18,10 @@ interface ApiProduct {
   bestseller: boolean;
 }
 
+interface ApiResponse {
+  content: ApiProduct[];
+}
+
 // 2. Define the shape of the product data your UI component expects
 interface FormattedProduct {
   id: number;
@@ -37,7 +41,7 @@ const HighLighted: React.FC = () => {
   useEffect(() => {
     fetch(`${BASE_URL}/api/v1/products/review/2?page=0&size=13  `)
       .then((res) => res.json())
-      .then((data: ApiProduct[]) => {
+      .then((data: ApiResponse) => {
         // Filter and transform backend keys to match the frontend UI contracts
         const formattedBestsellers: FormattedProduct[] = data.content
           .filter((product) => product.bestseller === true)

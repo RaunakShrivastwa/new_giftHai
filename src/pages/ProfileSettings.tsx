@@ -41,7 +41,7 @@ type SavedDeliveryLocation = {
 };
 
 type StoreUser = Partial<ProfileForm> & {
-  id?: string;
+  id?: string | number;
   _id?: string;
   userId?: string;
   token?: string;
@@ -49,7 +49,7 @@ type StoreUser = Partial<ProfileForm> & {
 };
 
 type AuthStateLike = {
-  user?: StoreUser;
+  user?: StoreUser | null;
   token?: string;
   accessToken?: string;
   jwt?: string;

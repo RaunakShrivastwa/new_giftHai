@@ -8,6 +8,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 export interface Product {
     id: number;
     title: string;
+    name?: string;
     description: string;
     price: number;
     stock: number;
@@ -142,14 +143,13 @@ const productSlice = createSlice({
             .addCase(searchProductsByQuery.fulfilled, (state, action: PayloadAction<Product[]>) => {
                 state.loading = false;
                 // Sanitization logic: Ensure fallback fields exist in case ES data has missing attributes
-                state.products = null;
-                state.products = (action.payload.content || []).map((p) => ({
+                state.products = (action.payload || []).map((p) => ({
                     ...p,
                     price: p.price ?? 0,
                     rating: p.rating ?? 0,
                     reviews: p.reviews ?? 0,
                     bestseller: p.bestseller ?? false,
-                    title: p.name ?? '',
+                    title: p.title ?? p.name ?? '',
                     description: p.description ?? '',
                     productImage: p.productImage ?? '',
                 }));

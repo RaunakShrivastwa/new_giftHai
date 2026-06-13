@@ -1456,7 +1456,7 @@ export function SiteHeader() {
   const isAdmin =
     user &&
     (user.role === "ADMIN" ||
-      (Array.isArray(user.roles) && user.roles.includes("ADMIN")) ||
+      (Array.isArray(user.role) && user.role.includes("ADMIN")) ||
       user.role === "ROLE_ADMIN");
 
   const handleLogout = () => {
