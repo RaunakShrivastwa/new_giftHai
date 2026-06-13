@@ -67,8 +67,12 @@ interface LocationResult {
   lat: string;
   lon: string;
   address?: {
+    house_number?: string;
     road?: string;
     pedestrian?: string;
+    neighbourhood?: string;
+    quarter?: string;
+    residential?: string;
     suburb?: string;
     city?: string;
     town?: string;
@@ -76,7 +80,38 @@ interface LocationResult {
     county?: string;
     state?: string;
     country?: string;
+    postcode?: string;
   };
+}
+
+interface SavedDeliveryLocation {
+  label: string;
+  lat?: string;
+  lon?: string;
+  pincode?: string;
+  source: "gps" | "search" | "map" | "pincode";
+}
+
+const DELIVERY_LOCATION_KEY = "giftHai.deliveryLocation";
+
+function formatFullAddress(data: {
+  display_name?: string;
+  address?: LocationResult["address"];
+}) {
+  const addr = data.address;
+  if (!addr) return data.display_name || "Your Location";
+
+  const parts = [
+    [addr.house_number, addr.road || addr.pedestrian].filter(Boolean).join(" "),
+    addr.neighbourhood || addr.quarter || addr.residential,
+    addr.suburb,
+    addr.city || addr.town || addr.village || addr.county,
+    addr.state,
+    addr.postcode,
+    addr.country,
+  ].filter(Boolean);
+
+  return parts.join(", ") || data.display_name || "Your Location";
 }
 
 /* ─── Free Delivery Badge SVG ────────────────────────────────────────── */
@@ -131,14 +166,52 @@ function FreeDeliveryBadge() {
 
 /* ─── useLocationPicker hook ─────────────────────────────────────────── */
 function useLocationPicker() {
-  const [location, setLocation] = useState<string | null>(null);
+  const [location, setLocation] = useState<string | null>(() => {
+    try {
+      const saved = localStorage.getItem(DELIVERY_LOCATION_KEY);
+      if (!saved) return null;
+      const parsed = JSON.parse(saved) as SavedDeliveryLocation;
+      return parsed.label || null;
+    } catch {
+      return null;
+    }
+  });
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"main" | "map">("main");
   const [query, setQuery] = useState("");
+  const [pincode, setPincode] = useState("");
   const [results, setResults] = useState<LocationResult[]>([]);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [pincodeLoading, setPincodeLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const saveLocation = useCallback((nextLocation: SavedDeliveryLocation) => {
+    setLocation(nextLocation.label);
+    localStorage.setItem(DELIVERY_LOCATION_KEY, JSON.stringify(nextLocation));
+  }, []);
+
+  const buildLocationFromResult = (
+    r: LocationResult,
+    source: SavedDeliveryLocation["source"],
+  ): SavedDeliveryLocation => {
+    const addr = r.address;
+    const city =
+      addr?.city ||
+      addr?.town ||
+      addr?.suburb ||
+      addr?.village ||
+      r.display_name.split(",")[0];
+    const label = addr?.state ? `${city}, ${addr.state}` : city;
+
+    return {
+      label,
+      lat: r.lat,
+      lon: r.lon,
+      pincode: addr?.postcode,
+      source,
+    };
+  };
 
   const searchPlaces = useCallback(async (q: string) => {
     if (!q.trim()) {
@@ -168,6 +241,42 @@ function useLocationPicker() {
     debounceRef.current = setTimeout(() => searchPlaces(val), 400);
   };
 
+  const fetchByPincode = async () => {
+    const pin = pincode.trim();
+    if (!/^\d{6}$/.test(pin)) {
+      toast.error("Please enter a valid 6-digit pincode.");
+      return;
+    }
+
+    setPincodeLoading(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(
+          pin,
+        )}&countrycodes=in&addressdetails=1&limit=1&format=json`,
+        { headers: { "Accept-Language": "en" } },
+      );
+      const data: LocationResult[] = await res.json();
+      if (!data.length) {
+        toast.error("No delivery location found for this pincode.");
+        return;
+      }
+
+      const nextLocation = buildLocationFromResult(data[0], "pincode");
+      nextLocation.pincode = nextLocation.pincode || pin;
+      saveLocation(nextLocation);
+      setOpen(false);
+      setView("main");
+      setQuery("");
+      setResults([]);
+      toast.success(`Delivering to ${nextLocation.label}`);
+    } catch {
+      toast.error("Could not fetch location by pincode.");
+    } finally {
+      setPincodeLoading(false);
+    }
+  };
+
   const useCurrentLocation = () => {
     if (!navigator.geolocation) {
       toast.error("Geolocation not supported by your browser.");
@@ -184,15 +293,14 @@ function useLocationPicker() {
           );
           const data = await res.json();
           const addr = data.address;
-          const city =
-            addr.city ||
-            addr.town ||
-            addr.suburb ||
-            addr.village ||
-            addr.county ||
-            "Your Location";
-          const label = addr.state ? `${city}, ${addr.state}` : city;
-          setLocation(label);
+          const label = formatFullAddress(data);
+          saveLocation({
+            label,
+            lat: String(latitude),
+            lon: String(longitude),
+            pincode: addr.postcode,
+            source: "gps",
+          });
           setOpen(false);
           setView("main");
           toast.success(`Delivering to ${label}`);
@@ -215,23 +323,20 @@ function useLocationPicker() {
   };
 
   const pickResult = (r: LocationResult) => {
-    const addr = r.address;
-    const city =
-      addr?.city || addr?.town || addr?.suburb || r.display_name.split(",")[0];
-    const label = addr?.state ? `${city}, ${addr.state}` : city;
-    setLocation(label);
+    const nextLocation = buildLocationFromResult(r, "search");
+    saveLocation(nextLocation);
     setOpen(false);
     setView("main");
     setQuery("");
     setResults([]);
-    toast.success(`Delivering to ${label}`);
+    toast.success(`Delivering to ${nextLocation.label}`);
   };
 
-  const pickFromMap = (label: string) => {
-    setLocation(label);
+  const pickFromMap = (nextLocation: SavedDeliveryLocation) => {
+    saveLocation(nextLocation);
     setOpen(false);
     setView("main");
-    toast.success(`Delivering to ${label}`);
+    toast.success(`Delivering to ${nextLocation.label}`);
   };
 
   const openMap = () => setView("map");
@@ -255,6 +360,10 @@ function useLocationPicker() {
     closeDropdown,
     query,
     handleQueryChange,
+    pincode,
+    setPincode,
+    pincodeLoading,
+    fetchByPincode,
     results,
     gpsLoading,
     searchLoading,
@@ -269,13 +378,13 @@ function MapPicker({
   onConfirm,
   onBack,
 }: {
-  onConfirm: (label: string) => void;
+  onConfirm: (location: SavedDeliveryLocation) => void;
   onBack: () => void;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
-  const [address, setAddress] = useState<string | null>(null);
+  const [address, setAddress] = useState<SavedDeliveryLocation | null>(null);
   const [loading, setLoading] = useState(false);
 
   const reverseGeocode = useCallback(async (lat: number, lng: number) => {
@@ -286,13 +395,13 @@ function MapPicker({
         { headers: { "Accept-Language": "en" } },
       );
       const data = await res.json();
-      const addr = data.address;
-      const parts = [
-        addr.road || addr.pedestrian || addr.suburb,
-        addr.city || addr.town || addr.village || addr.county,
-        addr.state,
-      ].filter(Boolean);
-      setAddress(parts.join(", ") || data.display_name);
+      setAddress({
+        label: formatFullAddress(data),
+        lat: String(lat),
+        lon: String(lng),
+        pincode: data.address?.postcode,
+        source: "map",
+      });
     } catch {
       setAddress(null);
     } finally {
@@ -465,7 +574,7 @@ function MapPicker({
             <span
               style={{ fontSize: "12px", color: "#374151", lineHeight: 1.4 }}
             >
-              {address}
+              {address.label}
             </span>
           </div>
         ) : (
@@ -503,6 +612,10 @@ type LocPicker = ReturnType<typeof useLocationPicker>;
 function LocationPanel({
   query,
   handleQueryChange,
+  pincode,
+  setPincode,
+  pincodeLoading,
+  fetchByPincode,
   results,
   gpsLoading,
   searchLoading,
@@ -645,6 +758,13 @@ function LocationPanel({
                 />
               )}
             </div>
+
+            <PincodeLookup
+              pincode={pincode}
+              setPincode={setPincode}
+              loading={pincodeLoading}
+              onFetch={fetchByPincode}
+            />
           </div>
 
           {/* Use GPS */}
@@ -882,6 +1002,80 @@ function LocationOptionBtn({
   );
 }
 
+function PincodeLookup({
+  pincode,
+  setPincode,
+  loading,
+  onFetch,
+}: {
+  pincode: string;
+  setPincode: (value: string) => void;
+  loading: boolean;
+  onFetch: () => void;
+}) {
+  return (
+    <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+      <input
+        type="text"
+        inputMode="numeric"
+        maxLength={6}
+        value={pincode}
+        onChange={(e) => setPincode(e.target.value.replace(/\D/g, ""))}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            onFetch();
+          }
+        }}
+        placeholder="Enter pincode"
+        style={{
+          minWidth: 0,
+          flex: 1,
+          padding: "8px 10px",
+          fontSize: "13px",
+          border: "1px solid #d1d5db",
+          borderRadius: "8px",
+          outline: "none",
+          boxSizing: "border-box",
+        }}
+        onFocus={(e) => (e.currentTarget.style.borderColor = "#3b82f6")}
+        onBlur={(e) => (e.currentTarget.style.borderColor = "#d1d5db")}
+      />
+      <button
+        type="button"
+        disabled={loading}
+        onClick={onFetch}
+        style={{
+          width: "84px",
+          borderRadius: "8px",
+          border: "none",
+          background: loading ? "#e5e7eb" : "#1d4ed8",
+          color: loading ? "#9ca3af" : "#fff",
+          fontSize: "12px",
+          fontWeight: "700",
+          cursor: loading ? "not-allowed" : "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "5px",
+        }}
+      >
+        {loading ? (
+          <Loader2
+            style={{
+              width: "13px",
+              height: "13px",
+              animation: "loc-spin 1s linear infinite",
+            }}
+          />
+        ) : (
+          "Fetch"
+        )}
+      </button>
+    </div>
+  );
+}
+
 /* ─── Mobile Location Section (inside drawer) ───────────────────────── */
 function MobileLocationSection({
   locPicker,
@@ -964,6 +1158,12 @@ function MobileLocationSection({
                 onBlur={(e) => (e.currentTarget.style.borderColor = "#d1d5db")}
               />
             </div>
+            <PincodeLookup
+              pincode={locPicker.pincode}
+              setPincode={locPicker.setPincode}
+              loading={locPicker.pincodeLoading}
+              onFetch={locPicker.fetchByPincode}
+            />
           </div>
 
           {/* GPS */}
@@ -1463,6 +1663,7 @@ export function SiteHeader() {
                         style={{ width: "11px", height: "11px", flexShrink: 0 }}
                       />
                       <span
+                        title={locPicker.location || undefined}
                         style={{
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -1928,6 +2129,7 @@ export function SiteHeader() {
                           }}
                         />
                         <span
+                          title={locPicker.location || undefined}
                           style={{
                             overflow: "hidden",
                             textOverflow: "ellipsis",
